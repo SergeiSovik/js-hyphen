@@ -104,7 +104,7 @@ build-release: $(BIN_MAIN)
 
 $(BIN_MAIN): $(REL_GLOBALS) $(REL_MODULES) $(REL_EXTERNAL) $(REL_LIBS)
 	@echo "Building $(patsubst $(REL_ROOT)/%,%,$@)"
-	@( cd $(REL_ROOT); $(strip $(GCC)) $(GCC_STABLE) $(GCC_PLATFORM) $(GCC_EXTERNAL) $(GCC_LIBS) $(GCC_MODULES) $(GCC_GLOBALS) --create_source_map "$(patsubst $(REL_ROOT)/%,%,$@).map" --js_output_file "$(patsubst $(REL_ROOT)/%,%,$@)" 2>&1 | ./compiler/errors.sh )
+	@( cd $(REL_ROOT); $(strip $(GCC_DEBUG)) $(GCC_STABLE) $(GCC_PLATFORM) $(GCC_EXTERNAL) $(GCC_LIBS) $(GCC_MODULES) $(GCC_GLOBALS) --create_source_map "$(patsubst $(REL_ROOT)/%,%,$@).map" --js_output_file "$(patsubst $(REL_ROOT)/%,%,$@)" 2>&1 | ./compiler/errors.sh )
 	@echo "//# sourceMappingURL=$(patsubst $(REL_BIN)/%,%,$@).map" >> $@
 	@sed -i 's:\"src/:\"$(REL_ROOT)/src/:g' $@.map
 	@rm -r -f $@.html

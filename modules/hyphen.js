@@ -184,9 +184,6 @@
  *    - (4) - гласные (ru: аеёиоуэюя) (en: aeiou)
  *    - (5) - неотделяемое от предидущего по правилу гласная (ru: й) (en: y)
  *    - (6) - неотделяемое от предидущего по правилу гласная (ru: ы)
- *    - (7) - неотделяемые гласные (образующие один гласный звук)
- *    - (8) - неотделяемое двугласное (похоже на тип 5 в русском)
- *    - (9) - неотделяемое созвучие (звучащее как один согласный звук)
  */
 
 const ASCII = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -198,14 +195,15 @@ const UPPERLOWER = UPPER + LOWER;
 const TYPESTYPES = TYPES + TYPES;
 
 const reMonophthongsEnd = /(aw|er|ew)$/ig
-const reDiphthtongsEnd = /(air|ear|ere|ow)$/ig
+const reDiphthtongsEnd = /(air|ear|ere)$/ig
 const reConsonantsEnd = /(dge|ge|gue|tch|the)$/ig
-const reSilientEnd = /(ce|de|re|se|ve)$/ig
+const reSilientEnd = /(ce|de|gi|re|se|si|ve)$/ig
 
 const reMonophthongs = /(ar|au|ea|ee|er|ir|oo|or|ou|ur)/ig
-const reDiphthtongs = /(ai|oa|oi|ou|oy)/ig
-const reConsonants = /(bb|ch|ck|ddl|ff|gg|gi|ll|mm|ng|nn|nk|ph|pp|qu|sh|si|su|th|tt|tu|wh)/ig
+const reDiphthtongs = /(ai|oa|oi|ou|oy|ow)/ig
+const reConsonants = /(bb|ch|ck|ddl|ff|gg|ll|mm|ng|nn|nk|ph|pp|qu|sh|su|th|tt|tu|wh)/ig
 const reNasalDorsovelar = /(ang|eng|ing|ong|ung|yng)/ig
+const reClosedSyllable = /([aeiouy][bcdfghjklmnpqrstvwxz][bcdfghjklmnpqrstvwxz])/ig
 
 /**
  * @param {RegExp} regex 
@@ -261,20 +259,39 @@ function consonants(regex, charWord, typeWord) {
 /**
  * @param {string} charWord 
  * @param {string} typeWord 
+ * @returns {string}
+ */
+function closedSyllable(charWord, typeWord) {
+	let reaRes;
+	while ((reaRes = reClosedSyllable.exec(charWord)) !== null) {
+		let ofs = reaRes.index;
+		typeWord = typeWord.substr(0, ofs) + '7' + typeWord.substr(ofs + 1);
+		reClosedSyllable.lastIndex = ofs + 1;
+	}
+	return typeWord;
+	
+}
+
+/**
+ * @param {string} charWord 
+ * @param {string} typeWord 
  * @param {string} symbol 
  * @returns {string}
  */
 export function hyphenWord(charWord, typeWord, symbol) {
 	// Предварительная обработка слова по 7 8 и 9 типам
 
-	typeWord = monophthongs(reMonophthongsEnd, charWord, typeWord); // type 7 translates to type 40
-	typeWord = diphthtongs(reDiphthtongsEnd, charWord, typeWord); // type 8 translates to type 45
-	typeWord = consonants(reConsonantsEnd, charWord, typeWord); // type 9 translates to type ?0
-	typeWord = consonants(reSilientEnd, charWord, typeWord); // type 9 translates to type ?0
-	typeWord = monophthongs(reMonophthongs, charWord, typeWord); // type 7 translates to type 4
-	typeWord = diphthtongs(reDiphthtongs, charWord, typeWord); // type 8 translates to type 45
-	typeWord = consonants(reConsonants, charWord, typeWord); // type 9 translates to type ?0
-	typeWord = consonants(reNasalDorsovelar, charWord, typeWord); // type 49 translates to type 400
+	typeWord = monophthongs(reMonophthongsEnd, charWord, typeWord); // translates to type 40
+	typeWord = diphthtongs(reDiphthtongsEnd, charWord, typeWord); // translates to type 45
+	typeWord = consonants(reConsonantsEnd, charWord, typeWord); // translates to type ?0
+	typeWord = consonants(reSilientEnd, charWord, typeWord); // translates to type ?0
+	typeWord = monophthongs(reMonophthongs, charWord, typeWord); // translates to type 4
+	typeWord = diphthtongs(reDiphthtongs, charWord, typeWord); // translates to type 45
+	typeWord = consonants(reConsonants, charWord, typeWord); // translates to type ?0
+	typeWord = closedSyllable(charWord, typeWord); // traslates to type 7
+	typeWord = monophthongs(reNasalDorsovelar, charWord, typeWord); // translates to type 400
+	typeWord = typeWord.replace(/75/ig, '45'); // fix diphtongs after closed syllable
+	typeWord = typeWord.replace(/70/ig, '40'); // fix monophthongs after closed syllable
 
 	// Разбиваем на звуки charWord и typeWord в формат без 0
 	let charPhonemes = [];
@@ -313,7 +330,7 @@ export function hyphenWord(charWord, typeWord, symbol) {
 		typePhoneme = typePhonemes[phonemeOfs];
 		typeSyllables[syllableOfs] += typePhoneme;
 		phonemeOfs++;
-		if ((typePhoneme == '4') || (typePhoneme == '6'))
+		if ((typePhoneme == '4') || (typePhoneme == '6') || (typePhoneme == '7'))
 			break;
 	}
 	while (phonemeOfs < charPhonemes.length) {
@@ -327,13 +344,13 @@ export function hyphenWord(charWord, typeWord, symbol) {
 			typePhoneme = typePhonemes[phonemeOfs];
 			charPhoneme = charPhonemes[phonemeOfs];
 			phonemeOfs++;
-			if ((typePhoneme == '4') || (typePhoneme == '6'))
+			if ((typePhoneme == '4') || (typePhoneme == '6') || (typePhoneme == '7'))
 				break;
 			charPart[partIndex++] = charPhoneme;
 			typePart += typePhoneme;
 		}
 		// Если достигли конца - копируем буфер в текущую часть
-		if ((phonemeOfs >= charPhonemes.length) && (typePhoneme != '4') && (typePhoneme != '6')) {
+		if ((phonemeOfs >= charPhonemes.length) && (typePhoneme != '4') && (typePhoneme != '6') && (typePhoneme != '7')) {
 			for (let key in charPart) {
 				charSyllables[syllableOfs] += charPart[key | 0];
 			}
@@ -344,28 +361,58 @@ export function hyphenWord(charWord, typeWord, symbol) {
 			// 1. сочетание шумных согласных между гласными отходит к последующему
 			// слогу: про-стой
 			// 13[4-(11)4]0 или 4-(12)4 или 4-(21)4 или 4-(22)4
+			// 13[4-(11)7]0 или 4-(12)7 или 4-(21)7 или 4-(22)7
 			// 2. сочетание шумного согласного с сонорным между гласными отходит к
 			// последующему слогу: до-бро
 			// 2[4-(23)4] или 4-(13)4
+			// 2[4-(23)7] или 4-(13)7
 			// 3. сочетание сонорного согласного с шумным между гласными имеет
 			// слогораздел внутри это сочетания: пар-та
 			// 1[4(3-1)4] или 4(3-2)4
+			// 1[4(3-1)7] или 4(3-2)7
 			// 4. сочетание звука Й с шумным или сонорным между гласными имеет
 			// слогораздел внутри этого сочетания, так как Й является более звучным,
 			// чем сонорный: тай-на
 			// 1[4(5-3)4] или 4(5-2)4 4(5-1)4
+			// 1[4(5-3)7] или 4(5-2)7 4(5-1)7
 			// 5. сочетание сонорных согласных между гласными отходит к последующему
 			// слогу: ко-рма
 			// 1[4-(33)4]
-			// 6. 4-(1)4 / 4-(2)4 / 4-(3)4
-			// 7. 4(5)-4
-			// 8. 4-4
+			// 1[4-(33)7]
+			// 6. 4-(1)4 / 4-(2)4 / 4-(3)4 / 4-(1)7 / 4-(2)7 / 4-(3)7
+			// 7. 4(5)-4 / 4(5)-7
+			// 8. 4-4 / 4-7
 			// 9. пре-дыс-то-ри-я = 134-(261-1)4-34-4
 			// под-твер-жде-ни-е = 14(2-12)43-224-34-4
 			if (typePart.length == 0) { // (8)
 				syllableOfs++;
 				charSyllables[syllableOfs] = charPhoneme;
 				typeSyllables[syllableOfs] = typePhoneme;
+			}
+			else if (prevTypePhoneme == '7') {
+				if (typePart.length < 3) {
+					// Закрытый слог не разрывается если число букв меньше 3
+					for (let key in charPart) {
+						charSyllables[syllableOfs] += charPart[key | 0];
+					}
+					typeSyllables[syllableOfs] += typePart;
+					charSyllables[syllableOfs] += charPhoneme;
+					typeSyllables[syllableOfs] += typePhoneme;
+				} else {
+					// Закрытый слог разрывается если число букв больше 3
+					let key = 0;
+					while (key < (typePart.length - 2)) {
+						charSyllables[syllableOfs] += charPart[key];
+						typeSyllables[syllableOfs] += typePart.charAt(key);
+						key++;
+					}
+					charSyllables[syllableOfs] += charPart[key];
+					typeSyllables[syllableOfs] += typePart.charAt(key);
+					key++;
+					syllableOfs++;
+					charSyllables[syllableOfs] = charPart[key] + charPhoneme;
+					typeSyllables[syllableOfs] = typePart.charAt(key) + typePhoneme;
+				}
 			}
 			else if (typePart.length == 1) {
 				if ((typePart == '1') || (typePart == '2') || (typePart == '3')) { // (6)
