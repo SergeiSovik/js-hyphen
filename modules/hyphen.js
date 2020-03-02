@@ -276,22 +276,25 @@ function closedSyllable(charWord, typeWord) {
  * @param {string} charWord 
  * @param {string} typeWord 
  * @param {string} symbol 
+ * @param {boolean=} preprocess
  * @returns {string}
  */
-export function hyphenWord(charWord, typeWord, symbol) {
+export function hyphenWord(charWord, typeWord, symbol, preprocess) {
 	// Предварительная обработка слова по 7 8 и 9 типам
 
-	typeWord = monophthongs(reMonophthongsEnd, charWord, typeWord); // translates to type 40
-	typeWord = diphthtongs(reDiphthtongsEnd, charWord, typeWord); // translates to type 45
-	typeWord = consonants(reConsonantsEnd, charWord, typeWord); // translates to type ?0
-	typeWord = consonants(reSilientEnd, charWord, typeWord); // translates to type ?0
-	typeWord = monophthongs(reMonophthongs, charWord, typeWord); // translates to type 4
-	typeWord = diphthtongs(reDiphthtongs, charWord, typeWord); // translates to type 45
-	typeWord = consonants(reConsonants, charWord, typeWord); // translates to type ?0
-	typeWord = closedSyllable(charWord, typeWord); // traslates to type 7
-	typeWord = monophthongs(reNasalDorsovelar, charWord, typeWord); // translates to type 400
-	typeWord = typeWord.replace(/75/ig, '45'); // fix diphtongs after closed syllable
-	typeWord = typeWord.replace(/70/ig, '40'); // fix monophthongs after closed syllable
+	if (preprocess || false) {
+		typeWord = monophthongs(reMonophthongsEnd, charWord, typeWord); // translates to type 40
+		typeWord = diphthtongs(reDiphthtongsEnd, charWord, typeWord); // translates to type 45
+		typeWord = consonants(reConsonantsEnd, charWord, typeWord); // translates to type ?0
+		typeWord = consonants(reSilientEnd, charWord, typeWord); // translates to type ?0
+		typeWord = monophthongs(reMonophthongs, charWord, typeWord); // translates to type 4
+		typeWord = diphthtongs(reDiphthtongs, charWord, typeWord); // translates to type 45
+		typeWord = consonants(reConsonants, charWord, typeWord); // translates to type ?0
+		typeWord = closedSyllable(charWord, typeWord); // traslates to type 7
+		typeWord = monophthongs(reNasalDorsovelar, charWord, typeWord); // translates to type 400
+		typeWord = typeWord.replace(/75/ig, '45'); // fix diphtongs after closed syllable
+		typeWord = typeWord.replace(/70/ig, '40'); // fix monophthongs after closed syllable
+	}
 
 	// Разбиваем на звуки charWord и typeWord в формат без 0
 	let charPhonemes = [];
@@ -501,9 +504,10 @@ export function hyphenWord(charWord, typeWord, symbol) {
 /**
  * @param {string} content 
  * @param {string} symbol 
+ * @param {boolean=} preprocess
  * @returns {string}
  */
-export function hyphen(content, symbol) {
+export function hyphen(content, symbol, preprocess) {
 	let newContent = '';
 	let contentOfs = 0;
 	let charWord = '';
@@ -569,7 +573,7 @@ export function hyphen(content, symbol) {
 					upperCount = 0;
 				}
 				else {
-					newContent += hyphenWord(charWord, typeWord, symbol);
+					newContent += hyphenWord(charWord, typeWord, symbol, preprocess);
 				}
 			}
 			newContent += ch;
@@ -586,7 +590,7 @@ export function hyphen(content, symbol) {
 		if (upperCount > 1)
 			newContent += charWord;
 		else
-			newContent += hyphenWord(charWord, typeWord, symbol);
+			newContent += hyphenWord(charWord, typeWord, symbol, preprocess);
 	}
 
 	return newContent;
@@ -594,18 +598,20 @@ export function hyphen(content, symbol) {
 
 /**
  * @param {HTMLElement} element 
+ * @param {boolean=} preprocess
  */
-export function hyphenHtml(element) {
-	element.innerHTML = hyphen(element.innerHTML, '&#173;');
+export function hyphenHtml(element, preprocess) {
+	element.innerHTML = hyphen(element.innerHTML, '&#173;', preprocess);
 }
 
 /**
  * @param {HTMLTextAreaElement} element
+ * @param {boolean=} preprocess
  */
-export function hyphenTextArea(element) {
+export function hyphenTextArea(element, preprocess) {
 	let content = element.placeholder;
 	if (content.length > 0) {
-		element.placeholder = hyphen(content, '\xAD');
+		element.placeholder = hyphen(content, '\xAD', preprocess);
 	}
 }
 
